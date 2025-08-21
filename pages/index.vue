@@ -30,7 +30,6 @@
           <p v-else class="repo-description no-description">
             沒有描述
           </p>
-
           <div class="repo-meta">
             <span class="owner">
               <img
@@ -40,7 +39,6 @@
               />
               {{ repo.owner.login }}
             </span>
-            <!-- <span class="updated">更新於 {{ formatDate(repo.updated_at) }}</span> -->
           </div>
         </article>
       </div>
@@ -88,22 +86,16 @@ interface Repository {
 }
 
 const fetchRepos = async (page: number): Promise<Repository[]> => {
-  const { data } = await $fetch<{ data: Repository[] }>(
-    `/api/posts?page=${page}&limit=10`,
-  )
-  return data
+  const response = await fetch(`/api/posts?page=${page}&limit=10`)
+  if (!response.ok) {
+    throw new Error('Network response was not ok')
+  }
+  const result = await response.json()
+  return result.data
 }
 
 const { items, loading, error, hasMore, sentinel, loadMore }
   = useInfiniteScroll(fetchRepos)
-
-const _formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('zh-TW', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
 </script>
 
 <style scoped>
