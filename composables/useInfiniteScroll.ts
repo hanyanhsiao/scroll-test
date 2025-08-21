@@ -1,3 +1,5 @@
+import { ref, onMounted, onUnmounted, readonly } from 'vue'
+
 export interface InfiniteScrollOptions {
   threshold?: number
   rootMargin?: string

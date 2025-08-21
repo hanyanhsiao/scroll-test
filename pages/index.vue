@@ -1,34 +1,54 @@
 <template>
   <div class="container">
     <header class="header">
-      <h1>無限滾動範例</h1>
-      <p>滾動到頁面底部來載入更多內容</p>
+      <h1>GitHub 倉庫無限滾動</h1>
+      <p>展示來自 GitHub 組織 <strong>Microsoft</strong> 的倉庫列表</p>
+      <small>使用 GitHub REST API 實現無限滾動功能</small>
     </header>
 
     <main class="main">
-      <div class="posts-container">
-        <article
-          v-for="post in items"
-          :key="post.id"
-          class="post-card"
-        >
-          <h2 class="post-title">
-            {{ post.title }}
-          </h2>
-          <div class="post-meta">
-            <span class="author">作者: {{ post.author }}</span>
-            <span class="date">{{ formatDate(post.createdAt) }}</span>
+      <div class="repos-container">
+        <article v-for="repo in items" :key="repo.id" class="repo-card">
+          <div class="repo-header">
+            <h2 class="repo-name">
+              <a :href="repo.html_url" target="_blank" rel="noopener">
+                {{ repo.name }}
+              </a>
+            </h2>
+            <div class="repo-stats">
+              <span v-if="repo.language" class="language">{{
+                repo.language
+              }}</span>
+              <span class="stars">⭐ {{ repo.stargazers_count }}</span>
+              <span class="forks">🍴 {{ repo.forks_count }}</span>
+            </div>
           </div>
-          <p class="post-content">
-            {{ post.content }}
+
+          <p v-if="repo.description" class="repo-description">
+            {{ repo.description }}
           </p>
+          <p v-else class="repo-description no-description">
+            沒有描述
+          </p>
+
+          <div class="repo-meta">
+            <span class="owner">
+              <img
+                :src="repo.owner.avatar_url"
+                :alt="repo.owner.login"
+                class="avatar"
+              />
+              {{ repo.owner.login }}
+            </span>
+            <!-- <span class="updated">更新於 {{ formatDate(repo.updated_at) }}</span> -->
+          </div>
         </article>
       </div>
 
       <div class="loading-section">
         <div v-if="loading" class="loading">
           <div class="spinner" />
-          <p>載入中...</p>
+          <p>載入更多倉庫...</p>
         </div>
 
         <div v-if="error" class="error">
@@ -39,7 +59,7 @@
         </div>
 
         <div v-if="!hasMore && !loading" class="end-message">
-          <p>已載入所有內容</p>
+          <p>已載入所有倉庫</p>
         </div>
 
         <div ref="sentinel" class="sentinel" />
@@ -49,22 +69,35 @@
 </template>
 
 <script setup lang="ts">
-interface Post {
+interface Repository {
   id: number
-  title: string
-  content: string
-  author: string
-  createdAt: string
+  name: string
+  full_name: string
+  description: string | null
+  html_url: string
+  language: string | null
+  stargazers_count: number
+  forks_count: number
+  created_at: string
+  updated_at: string
+  owner: {
+    login: string
+    avatar_url: string
+    html_url: string
+  }
 }
 
-const fetchPosts = async (page: number): Promise<Post[]> => {
-  const { data } = await $fetch<{ data: Post[] }>(`/api/posts?page=${page}&limit=10`)
+const fetchRepos = async (page: number): Promise<Repository[]> => {
+  const { data } = await $fetch<{ data: Repository[] }>(
+    `/api/posts?page=${page}&limit=10`,
+  )
   return data
 }
 
-const { items, loading, error, hasMore, sentinel, loadMore } = useInfiniteScroll(fetchPosts)
+const { items, loading, error, hasMore, sentinel, loadMore }
+  = useInfiniteScroll(fetchRepos)
 
-const formatDate = (dateString: string) => {
+const _formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('zh-TW', {
     year: 'numeric',
     month: 'long',
@@ -103,55 +136,109 @@ const formatDate = (dateString: string) => {
   font-size: 1.1rem;
 }
 
-.posts-container {
+.repos-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.post-card {
+.repo-card {
   background: white;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #e1e5e9;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 14px;
 }
 
-.post-card:hover {
+.repo-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.post-title {
-  margin: 0 0 12px 0;
+.repo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 16px;
+}
+
+.repo-name {
+  margin: 0;
   font-size: 1.4rem;
   font-weight: 600;
-  color: #2c3e50;
   line-height: 1.3;
+  flex: 1;
 }
 
-.post-meta {
+.repo-name a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.repo-name a:hover {
+  text-decoration: underline;
+}
+
+.repo-stats {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-  font-size: 0.9rem;
+  gap: 12px;
+  font-size: 0.85rem;
   color: #666;
+  flex-shrink: 0;
 }
 
-.author {
+.language {
+  background: #f1f8ff;
+  color: #0366d6;
+  padding: 2px 8px;
+  border-radius: 12px;
   font-weight: 500;
 }
 
-.date {
-  color: #888;
+.stars,
+.forks {
+  color: #586069;
 }
 
-.post-content {
-  margin: 0;
+.repo-description {
+  margin: 0 0 16px 0;
   line-height: 1.6;
   color: #555;
   font-size: 1rem;
+}
+
+.no-description {
+  color: #999;
+  font-style: italic;
+}
+
+.repo-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #666;
+  gap: 16px;
+}
+
+.owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.updated {
+  color: #888;
 }
 
 .loading-section {
@@ -177,8 +264,12 @@ const formatDate = (dateString: string) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error {
@@ -230,17 +321,28 @@ const formatDate = (dateString: string) => {
     font-size: 1.6rem;
   }
 
-  .post-card {
+  .repo-card {
     padding: 16px;
   }
 
-  .post-title {
+  .repo-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .repo-name {
     font-size: 1.2rem;
   }
 
-  .post-meta {
+  .repo-stats {
+    flex-wrap: wrap;
+  }
+
+  .repo-meta {
     flex-direction: column;
-    gap: 4px;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>
